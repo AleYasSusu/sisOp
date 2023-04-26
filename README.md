@@ -1,9 +1,8 @@
 ## Trabalho de Sistemas Operacionais
 
 Integrantes:
-- Diego Klein
-- Vitor Delela
-- Lucas Martins
+- Alessandro Borges de Souza
+- Vinicio Muller
 
 O projeto esta dividido em 2 pastas diferentes:
 

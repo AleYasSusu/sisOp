@@ -7,7 +7,7 @@ import Hardware.Word;
 // --------------- esta classe representa programas armazenados (como se estivessem em disco) que podem ser carregados para a memória (load faz isto)  --------------- //
 
 public class Programas {
-        // este fatorial so aceita valores positivos. nao pode ser zero
+        // Este fatorial so aceita valores positivos. Nao pode ser zero
         public Word[] fatorial = new Word[] {
                 new Word(Opcode.LDI, 0, -1, 5), // 0 r0 é valor a calcular fatorial
                 new Word(Opcode.LDI, 1, -1, 1), // 1 r1 é 1 para multiplicar (por r0)
