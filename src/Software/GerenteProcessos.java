@@ -41,24 +41,9 @@ public class GerenteProcessos {
         }
 
         if (usarParticao) {
-            if (gerenciaParticionada.temEspacoParaAlocar(tamanhoAlocar)) {
+            if (gerenciaParticionada.temEspacoParaAlocar(1)) { // Alocar uma partição
                 int allocatedPartition = gerenciaParticionada.alocaParticao();
-                ArrayList<Integer> allocatedPages = new ArrayList<>();
-
-                // Aloca uma página de cada vez até atingir o tamanho necessário
-                int wordsAllocated = 0;
-                while (wordsAllocated < tamanhoAlocar) {
-                    ArrayList<Integer> pages = gerenciaPaginada.alocaPagina(p);
-                    if (pages != null) {
-                        allocatedPages.addAll(pages);
-                        wordsAllocated += pages.size() * gerenciaPaginada.tamFrame;
-                    } else {
-                        System.out.println("Erro ao alocar páginas para o processo de ID: " + processId);
-                        return null;
-                    }
-                }
-
-                processControlBlock = new PCB(processId, allocatedPages, allocatedPartition, 0);
+                processControlBlock = new PCB(processId, null, allocatedPartition, 0); // Não há alocação de páginas, então passe null
                 ++processId;
 
                 listaPCBs.add(processControlBlock);
@@ -87,7 +72,7 @@ public class GerenteProcessos {
                     }
                 }
 
-                processControlBlock = new PCB(processId, paginas, 0, 0);
+                processControlBlock = new PCB(processId, paginas, 0, 0); // Alocar páginas para o processo
                 ++processId;
 
                 listaPCBs.add(processControlBlock);
@@ -98,8 +83,6 @@ public class GerenteProcessos {
             }
         }
     }
-
-
 
     public void finish(PCB processo) {
         System.out.println("Processo encerrado: " + processo.getId());

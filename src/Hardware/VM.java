@@ -17,7 +17,7 @@ public class VM {
         tamMem = 1024;
         mem = new Memory(tamMem);
         m = mem.m;
-        gerenteProcessos = new GerenteProcessos(mem, false); // Use a classe GerenteProcessos correta
+        gerenteProcessos = new GerenteProcessos(mem, true); // Use a classe GerenteProcessos correta
 
         cpu = new CPU(mem, ih, sysCall, true);  // debug true liga debug
     }
