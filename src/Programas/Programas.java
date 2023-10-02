@@ -1,10 +1,10 @@
 package Programas;
 
-import Hardware.Opcode;
-import Hardware.Word;
-
 // --------------------------------------------------------- P R O G R A M A S  - não fazem parte do sistema --------------------------------------------------------- //
 // --------------- esta classe representa programas armazenados (como se estivessem em disco) que podem ser carregados para a memória (load faz isto)  --------------- //
+
+import Hardware.Opcode;
+import Hardware.Word;
 
 public class Programas {
         // Este fatorial so aceita valores positivos. Nao pode ser zero

@@ -5,7 +5,6 @@ import Hardware.Word;
 import Programas.Programas;
 import Software.InterruptHandling;
 import Software.PCB;
-import Software.Processo;
 import Software.SysCallHandling;
 
 // -------------------  S I S T E M A -------------------------------------------------------------------- //
@@ -28,58 +27,50 @@ public class Sistema{   // a VM com tratamento de interrupções
 // ------------------ U T I L I T A R I O S   D O   S I S T E M A ----------------------------------------- //
 // ------------------ load é invocado a partir de requisição do usuário ----------------------------------- //
 
-	public int carregaPrograma(Word[] programa){
-		return vm.criaProcesso(programa).getId();
-	}
+    public int carregaPrograma(Word[] programa){
+        return vm.criaProcesso(programa).getId();
+    }
 
-	public void encerraProcesso (PCB processo){
-		vm.encerraProcesso(processo);
-	}
+    public void encerraProcesso (PCB processo){
+        vm.encerraProcesso(processo);
+    }
 
-	public void encerraProcessoById (int processId){
-		vm.encerraProcesso(vm.gerenteProcesso.getProcessByID(processId));
-	}
+    public void encerraProcessoById (int processId){
+        vm.encerraProcesso(vm.gerenteProcessos.getProcessByID(processId));
+    }
 
-	public void carregaAndExecutaPrograma(Word[] programa){
-		int pid = carregaPrograma(programa);
-		runByProcessId(pid);
-	}
+    public void carregaAndExecutaPrograma(Word[] programa){
+        int pid = carregaPrograma(programa);
+        runByProcessId(pid);
+    }
 
-	public void runByProcessId(int pid) {
-		Processo processo = vm.gerenteProcesso.getProcessByID(pid);
-		if (processo != null) {
-			int inicioMemoria = processo.getTabelaPaginas()[0] * vm.gerenteProcesso.getTamPagina();
-			int fimMemoria = (processo.getTabelaPaginas()[processo.getTabelaPaginas().length - 1] + 1) * vm.gerenteProcesso.getTamPagina() - 1;
-			int programCounter = getProgramCounterByProcessId(pid);
+    public void runByProcessId (int pid){
+        vm.cpu.setContext(0, vm.tamMem - 1,
+                getProgramCounterbyProcessId(pid), vm.gerenteProcessos.getProcessByID(pid).getAllocatedPages()); // seta estado da cpu ]
+        vm.cpu.run();
+    }
 
-			vm.cpu.setContext(inicioMemoria, fimMemoria, programCounter, processo.getTabelaPaginas());
-			vm.cpu.run();
-		} else {
-			System.out.println("Processo com ID " + pid + " não encontrado.");
-		}
-	}
+    public int getProgramCounterbyProcessId(int pid){
+        return vm.gerenteProcessos.getProcessByID(pid).pc;
+    }
 
-	public int getProgramCounterbyProcessId(int pid){
-		return vm.gerenteProcesso.getProcessByID(pid).pc;
-	}
+    public void listarProcessos(){
+        vm.listaProcessos();
+    }
 
-	public void listarProcessos(){
-		vm.listaProcessos();
-	}
+    public void changeDebug(boolean newValue){
+        vm.cpu.setDebug(newValue);
+    }
 
-	public void changeDebug(boolean newValue){
-		vm.cpu.setDebug(newValue);
-	}
+    public void dumpMemoria(int posicaoInicial, int posicaoFinal){
+        vm.mem.dump(posicaoInicial, posicaoFinal);
+    }
 
-	public void dumpMemoria(int posicaoInicial, int posicaoFinal){
-		vm.mem.dump(posicaoInicial, posicaoFinal);
-	}
+    public void dumpPCB(int processId){
+        System.out.println(vm.gerenteProcessos.getProcessByID(processId).toString());
+    }
 
-	public void dumpPCB(int processId){
-		System.out.println(vm.gerenteProcesso.getProcessByID(processId).toString());
-	}
-
-	public boolean existeProcesso(int pid){
-		return vm.existeProcesso(pid);
-	}
+    public boolean existeProcesso(int pid){
+        return vm.existeProcesso(pid);
+    }
 }

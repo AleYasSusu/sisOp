@@ -1,50 +1,40 @@
 package Software;
 
-import Hardware.CPU;
-import Hardware.Opcode;
 import Hardware.VM;
-
-import java.util.ArrayList;
-import java.util.Scanner;
-
-// ------------------- C H A M A D A S  D E  S I S T E M A  - rotinas de tratamento ---------------------- //
+import Hardware.Word;
 
 public class SysCallHandling {
     private VM vm;
-    
-    public void setVM(VM _vm){
+
+    public void setVM(VM _vm) {
         vm = _vm;
     }
 
-    public void handle() {
-        System.out.println("                                               Chamada de Sistema com op  /  par:  "+ vm.cpu.reg[8] + " / " + vm.cpu.reg[9]);
+    public void handle() {   // apenas avisa - todas interrupcoes neste momento finalizam o programa
+        System.out.println("Chamada de Sistema com op  /  par:  " + vm.cpu.reg[8] + " / " + vm.cpu.reg[9]);
     }
 
-    public void trapHandling (int reg9convertido){
-        Scanner io = new Scanner(System.in);
-
-        System.out.println("reg[8] = " + vm.cpu.reg[8]);
-        System.out.println("reg[9] = " + vm.cpu.reg[9]);
-
-        switch (vm.cpu.reg[8]) {
-            case 1:
-                System.out.println("ENTRADA");
-                System.out.println("Digite um valor inteiro: ");
-
-                Integer input = io.nextInt();
-
-                vm.cpu.mem.m[vm.cpu.reg[9]].opc = Opcode.DATA;
-                vm.cpu.mem.m[vm.cpu.reg[9]].p = input;
-
-                System.out.println("Valor armazenado " + vm.cpu.mem.m[vm.cpu.reg[9]].p);
-                System.out.println("Posição  " + vm.cpu.reg[9]);
-                break;
-
-            case 2:
-                System.out.println("SAÍDA");
-                System.out.println("Valor: " + vm.cpu.mem.m[reg9convertido].p);
-                break;
+    private void loadProgram(Word[] p, Word[] m) {
+        for (int i = 0; i < p.length; i++) {
+            m[i].opc = p[i].opc;
+            m[i].r1 = p[i].r1;
+            m[i].r2 = p[i].r2;
+            m[i].p = p[i].p;
         }
     }
 
+    private void loadProgram(Word[] p) {
+        loadProgram(p, vm.m);
+    }
+
+    private void loadAndExec(Word[] p, int pid) {
+        loadProgram(p);    // carga do programa na memoria
+        System.out.println("---------------------------------- programa carregado na memoria");
+        vm.mem.dump(0, p.length);            // dump da memoria nestas posicoes
+        vm.cpu.setContext(0, vm.tamMem - 1, 0, vm.gerenteProcessos.getProcessByID(pid).getAllocatedPages());      // seta estado da cpu ]
+        System.out.println("---------------------------------- inicia execucao ");
+        vm.cpu.run();                                // cpu roda programa ate parar
+        System.out.println("---------------------------------- memoria após execucao ");
+        vm.mem.dump(0, p.length);            // dump da memoria com resultado
+    }
 }

@@ -1,6 +1,5 @@
 package Hardware;
 
-// -------------- Possiveis interrupcoes que esta CPU gera -------------- //
-public enum Interrupts {
+public enum Interrupts {               // possiveis interrupcoes que esta CPU gera
     noInterrupt, intEnderecoInvalido, intInstrucaoInvalida, intOverflow, intSTOP;
 }
