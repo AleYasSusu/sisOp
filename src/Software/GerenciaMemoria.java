@@ -1,110 +1,174 @@
 package Software;
 
 import Hardware.Memory;
-import Hardware.Opcode;
-import Hardware.Word;
-
 import java.util.ArrayList;
+import java.util.List;
 
-public class GerenciaMemoria {
-    public Memory memory;
-    public int tamPg;
-    public int tamFrame;
-    public int numeroFrames;
-    public boolean[] availableFrames;
+public class GerenciaMemoria implements GM_Particionada, GM_Paginada {
+    private List<Particao> particoesAlocadas; // Lista para rastrear partições alocadas
+    private boolean[] particoesDisponiveis; // Array para controlar partições disponíveis (true) e alocadas (false)
+    private int tamanhoParticao;
+    private Memory memory;
+    private int tamPagina;
+    private int tamFrame;
+    private int numeroFrames;
+    private boolean[] availableFrames;
+    private boolean usarPaginacao;
 
-    public GerenciaMemoria(Memory memory) {
+    public GerenciaMemoria(Memory memory, boolean usarPaginacao, int numeroParticoes) {
         this.memory = memory;
-        this.tamFrame = this.tamPg = 16;
-        this.numeroFrames = this.memory.tamMem / this.tamPg;
+        this.usarPaginacao = usarPaginacao;
+        this.tamFrame = this.tamPagina = 16;
+        this.numeroFrames = this.memory.tamMem / this.tamPagina;
+        this.availableFrames = initFrames(this.memory.tamMem, tamFrame);
 
-        availableFrames = initFrames(memory.tamMem, tamFrame);
+        this.tamanhoParticao = this.memory.tamMem / numeroParticoes;
+        this.particoesDisponiveis = new boolean[numeroParticoes];
+
+        for (int i = 0; i < numeroParticoes; i++) {
+            particoesDisponiveis[i] = true; // Todas as partições estão disponíveis no início
+        }
+
+        this.particoesAlocadas = new ArrayList<>();
     }
 
     // Inicializa o array de frames com valor TRUE
     private boolean[] initFrames(int tamMem, int pageSize) {
-        availableFrames = new boolean[(tamMem / pageSize)];
-        for (int i = 0; i < availableFrames.length; i++)
+        boolean[] availableFrames = new boolean[(tamMem / pageSize)];
+        for (int i = 0; i < availableFrames.length; i++) {
             availableFrames[i] = true;
+        }
         return availableFrames;
     }
 
-    public boolean temEspacoParaAlocar(int numeroPalavras) {
-        int quantidadeDeFramesQueVaiOcupar = 0;
-
-        // Se for exatamente o tamanho da pagina, se não usa um a mais
-        if (numeroPalavras % tamFrame == 0) quantidadeDeFramesQueVaiOcupar = ((numeroPalavras / tamFrame));
-        else quantidadeDeFramesQueVaiOcupar = ((numeroPalavras / tamFrame) + 1);
-
-        int quantidadeDeFramesDisponiveis = 0;
-        for (int i = 0; i < availableFrames.length; i++)
-            if (availableFrames[i]) quantidadeDeFramesDisponiveis++;
-
-        return (quantidadeDeFramesQueVaiOcupar <= quantidadeDeFramesDisponiveis);
-    }
-
-    // Retornar o conjunto de frames alocados
-    public ArrayList<Integer> aloca(Word[] p) {
-        int quantidadeDeFramesQueVaiOcupar = 0;
-
-        int tamanhoAlocar = p.length;
-
-        for(Word w : p){
-            if (w.opc.equals(Opcode.LDD) || w.opc.equals(Opcode.STD))
-                if (w.p > tamanhoAlocar)
-                    tamanhoAlocar = w.p;
+    @Override
+    public boolean alocaPagina(int nroPalavras, int[] tabelaPaginas) {
+        if (!usarPaginacao) {
+            return false; // Paginação não está habilitada
         }
 
-        //System.out.println("Alocadas " + tamanhoAlocar + " posicoes...");
+        int quantidadeDeFramesQueVaiOcupar = nroPalavras / tamFrame;
+        if (nroPalavras % tamFrame != 0) {
+            quantidadeDeFramesQueVaiOcupar++; // Se não for um múltiplo, precisa de mais um frame
+        }
 
-        // Se for exatamente o tamanho da Pagina, se nao usa um a mais
-        if (tamanhoAlocar % tamFrame == 0) quantidadeDeFramesQueVaiOcupar = ((tamanhoAlocar / tamFrame));
-        else quantidadeDeFramesQueVaiOcupar = ((tamanhoAlocar / tamFrame) + 1);
-
-        int quantidadeNovosFramesOcupados = 0;
-        int posicao = 0;
-
-        ArrayList<Integer> paginas = new ArrayList<>();
+        List<Integer> paginasAlocadas = new ArrayList<>();
 
         for (int f = 0; f < availableFrames.length; f++) {
-            if (availableFrames[f] == true) {
+            if (availableFrames[f]) {
                 availableFrames[f] = false;
-                quantidadeNovosFramesOcupados++;
-                paginas.add(f);
+                paginasAlocadas.add(f);
 
-                for (int j = (f*tamFrame); j < (f+1)*tamFrame; j++) {
-                    if (posicao < p.length) {
-                        memory.m[j].opc = p[posicao].opc;
-                        memory.m[j].r1 = p[posicao].r1;
-                        memory.m[j].r2 = p[posicao].r2;
-                        memory.m[j].p = p[posicao].p;
-                        posicao++;
-                    } else {
-                        break;
+                if (paginasAlocadas.size() == quantidadeDeFramesQueVaiOcupar) {
+                    // Copia os índices dos frames alocados para a tabela de páginas
+                    for (int i = 0; i < paginasAlocadas.size(); i++) {
+                        tabelaPaginas[i] = paginasAlocadas.get(i);
                     }
+                    return true; // Alocação bem-sucedida
                 }
             }
-
-            if (quantidadeNovosFramesOcupados == quantidadeDeFramesQueVaiOcupar){
-                //memory.dump(0,memory.tamMem);
-                return paginas; //Retorna um array de inteiros com os índices dos frames.
-            }
-
         }
-        return null;
+        return false; // Não há frames disponíveis para alocar a quantidade desejada
     }
 
-    // Dado um array de inteiros com as páginas de um processo, o gerente desloca as páginas.
-    public void desaloca(ArrayList<Integer> paginasAlocadas) {
-        for (Integer pagina : paginasAlocadas) {
-            for (int i = 0; i < availableFrames.length; i++) {
-                if (pagina == i) {
-                    availableFrames[i] = true; // Libera o frame
-                    for (int position = (i * tamFrame); position < (i + 1) * tamFrame; position++) {
-                        memory.m[position] = new Word(Opcode.___, -1,-1,-1); //Esvazia memoria
-                    }
+    @Override
+        public void desalocaPagina(int[] tabelaPaginas) {
+            if (!usarPaginacao) {
+                return; // Paginação não está habilitada
+            }
+
+            for (int i = 0; i < tabelaPaginas.length; i++) {
+                int pagina = tabelaPaginas[i];
+                if (pagina >= 0 && pagina < availableFrames.length) {
+                    availableFrames[pagina] = true; // Marca o frame como disponível
                 }
             }
+        }
+
+    @Override
+    public int alocaParticao(int tamanho) {
+        for (int i = 0; i < particoesDisponiveis.length; i++) {
+            if (particoesDisponiveis[i] && tamanho <= tamanhoParticao) {
+                // Marca a partição como alocada
+                particoesDisponiveis[i] = false;
+                Particao novaParticao = new Particao(i, tamanho);
+                particoesAlocadas.add(novaParticao);
+                return i; // Retorna o índice da partição alocada
+            }
+        }
+        return -1; // Não há partição disponível com tamanho suficiente
+    }
+
+    @Override
+    public void desalocaParticao(int part) {
+        if (part >= 0 && part < particoesAlocadas.size()) {
+            Particao particao = particoesAlocadas.get(part);
+            particoesDisponiveis[particao.getIndice()] = true; // Marca a partição como disponível
+            particoesAlocadas.remove(part);
+        }
+    }
+
+    @Override
+    public boolean temEspacoParaAlocar(int tamanho) {
+        if (usarPaginacao) {
+            int quantidadeDeFramesQueVaiOcupar = tamanho / tamFrame;
+            if (tamanho % tamFrame != 0) {
+                quantidadeDeFramesQueVaiOcupar++; // Se não for um múltiplo, precisa de mais um frame
+            }
+
+            int framesDisponiveis = 0;
+            for (int f = 0; f < availableFrames.length; f++) {
+                if (availableFrames[f]) {
+                    framesDisponiveis++;
+                }
+            }
+
+            return framesDisponiveis >= quantidadeDeFramesQueVaiOcupar;
+        } else {
+            // Lógica para verificar espaço disponível em particionamento
+            // Vamos supor que você tem uma lista de partições livres
+            // Cada Particao na lista tem um tamanho e um status (livre ou alocada)
+            for (Particao particao : particoesAlocadas) {
+                if (particao.getTamanho() >= tamanho && particao.isLivre()) {
+                    return true; // Existe uma partição livre com tamanho suficiente
+                }
+            }
+            return false; // Não há espaço disponível em particionamento
+        }
+    }
+    public int getTamanhoParticao() {
+        return tamanhoParticao;
+    }
+
+    public int getTamPagina() {
+        return tamPagina;
+    }
+
+    public int getTamFrame() {
+        return tamFrame;
+    }
+
+    private class Particao {
+        private int indice;
+        private int tamanho;
+        private boolean livre;
+
+        public Particao(int indice, int tamanho) {
+            this.indice = indice;
+            this.tamanho = tamanho;
+            this.livre = true; // Inicialmente, a partição é livre
+        }
+
+        public int getIndice() {
+            return indice;
+        }
+
+        public int getTamanho() {
+            return tamanho;
+        }
+
+        public boolean isLivre() {
+            return livre;
         }
     }
 }

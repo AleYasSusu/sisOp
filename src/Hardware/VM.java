@@ -1,9 +1,6 @@
 package Hardware;
 
-import Software.GerenciaProcesso;
-import Software.InterruptHandling;
-import Software.PCB;
-import Software.SysCallHandling;
+import Software.*;
 
 // ------------------------------------ V M  - constituida de CPU e MEMORIA ------------------------------------ //
 // ---------------------------------------- atributos e construcao da VM --------------------------------------- //
@@ -13,31 +10,32 @@ public class VM {
   public Memory mem;
   public CPU cpu;
   public GerenciaProcesso gerenteProcesso;
-  
+
   // vm deve ser configurada com endereço de tratamento de interrupcoes e de chamadas de sistema
-  public VM(InterruptHandling ih, SysCallHandling sysCall){
+  public VM(InterruptHandling ih, SysCallHandling sysCall, GM_Particionada gerenteParticionado, GM_Paginada gerentePaginado) {
     tamMem = 1024;
     mem = new Memory(tamMem);
     m = mem.m;
-    gerenteProcesso = new GerenciaProcesso(mem);
 
-    cpu = new CPU(mem,ih,sysCall, true, gerenteProcesso.gerenciaMemoria.tamFrame);  // debug true liga debug
+    // Inicialize o gerente de processos com os argumentos fornecidos
+    gerenteProcesso = new GerenciaProcesso(gerenteParticionado, gerentePaginado);
+
+    cpu = new CPU(mem, ih, sysCall, true, 16);
   }
 
-  public PCB criaProcesso(Word[] p){
-    return gerenteProcesso.create(p);
+  public boolean criaProcesso(Word[] programa, int tamanho) {
+    return gerenteProcesso.criaProcesso(programa, tamanho);
   }
 
-  public void encerraProcesso(PCB pcb){
-    gerenteProcesso.finish(pcb);
+  public void encerraProcesso(PCB pcb) {
+    gerenteProcesso.encerrarProcesso(pcb);
   }
 
-  public void listaProcessos(){
-    gerenteProcesso.listAllProcesses();
+  public void listaProcessos() {
+    gerenteProcesso.listaProcessos();
   }
 
-  public boolean existeProcesso(int pid){
-    return gerenteProcesso.hasProcess(pid);
+  public boolean existeProcesso(int pid) {
+    return gerenteProcesso.existeProcesso(pid);
   }
-
 }
